@@ -4,13 +4,18 @@
 
 int main(int argc, char** argv)
 {
-    (void)argc;
-    printf("IPC client example\n");
+    printf("IPC client sample\n");
+
+    if (argc != 2)
+    {
+        printf("Usage: %s <client-name>\n", argv[0]);
+        return 1;
+    }
 
     int ch = mk_channel("ex", ctClient);
     if (ch < 0)
     {
-        printf("Error - incorrect channel name\n");
+        printf("Error - could not connect to the channel `ex`\n");
     } else
     {
         int i = 0;
@@ -26,9 +31,9 @@ int main(int argc, char** argv)
                 break;
             }
         }
-        printf("Done for [%d] clients\n", i);
+        printf("Done[%d] times for client [%s]\n", i, argv[1]);
+        rm_channel(ch);
     }
 
-    rm_channel(ch);
     return 0;
 }

@@ -1,4 +1,4 @@
-# libipc
+# libipc ver. 0.0.1a
 Simple and productive IPC library written on pure C and based on named pipes
 
 # Configure:
@@ -11,6 +11,6 @@ make
 make samples
 
 # Run samples:
-./sample-server &
-./sample-client client1
-./sample-client client2
+> ./sample-server &
+> ./sample-client client1
+> ./sample-client client2

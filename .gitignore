@@ -6,3 +6,4 @@ libipc.a
 libipc.so
 sample-client
 sample-server
+sample-hello

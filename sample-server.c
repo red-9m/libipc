@@ -3,7 +3,7 @@
 
 int main()
 {
-    printf("IPC server example - ready for messages\n");
+    printf("IPC server sample\n");
 
     int ch = mk_channel("ex", ctServer);
     int i;

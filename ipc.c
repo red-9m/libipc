@@ -8,7 +8,7 @@
 #include "ipc.h"
 
 #define MSG_BUFF_SIZE (64 * 1024)
-#define MAX_CHANNELS 1024
+#define MAX_CHANNELS 64
 #define FREE_CHANNEL 0
 
 struct Channel
@@ -19,20 +19,10 @@ struct Channel
     char *mMsgBuff;
     int mMsgBuffSize;
     char *mMsgBuffPtr;
-};
+    char mReserved[24];
+}; // Size 64 Bytes
 
 static struct Channel g_channels[MAX_CHANNELS];
-static int g_first_channel = 1;
-
-static void _clear_channels()
-{
-    int i;
-    for (i = 0; i < MAX_CHANNELS; i++)
-    {
-        g_channels[i].mFileHdl = FREE_CHANNEL;
-        g_channels[i].mMsgBuffPtr = NULL;
-    }
-}
 
 static int _find_free_channel()
 {
@@ -72,12 +62,6 @@ int mk_channel(const char* chName, enum ChannelType chType)
     struct Channel *ch = NULL;
     int ch_id;
     int name_len = 0;
-
-    if (g_first_channel)
-    {
-        _clear_channels();
-        g_first_channel = 0;
-    }
 
     ch_id = _find_free_channel();
     if (ch_id >= 0)
