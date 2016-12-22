@@ -1,0 +1,8 @@
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+libipc.a
+libipc.so
+sample-client
+sample-server
