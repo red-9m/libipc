@@ -14,13 +14,12 @@
 struct Channel
 {
     char *mName;
-    enum ChannelType mType;
+    int mCreated;
     int mFileHdl;
     char *mMsgBuff;
     int mMsgBuffSize;
     char *mMsgBuffPtr;
-    char mReserved[24];
-}; // Size 64 Bytes
+};
 
 static struct Channel g_channels[MAX_CHANNELS];
 
@@ -54,8 +53,7 @@ static const char *_message_from_buff(struct Channel *ch)
     return result;
 }
 
-// non-negative - ok; negative - error
-int mk_channel(const char* chName, enum ChannelType chType)
+static int _open_channel(const char* chName, int chCreate)
 {
     int result = -1;
     int file_hdl = 0;
@@ -68,7 +66,7 @@ int mk_channel(const char* chName, enum ChannelType chType)
     {
         ch = &g_channels[ch_id];
 
-        if (chType == ctServer)
+        if (chCreate)
         {
             mkfifo(chName, S_IRWXU);
             file_hdl = open(chName, O_RDWR);
@@ -83,7 +81,7 @@ int mk_channel(const char* chName, enum ChannelType chType)
             ch->mName = malloc(name_len);
             ch->mMsgBuff = malloc(MSG_BUFF_SIZE + 64);
             strncpy(ch->mName, chName, name_len);
-            ch->mType = chType;
+            ch->mCreated = chCreate;
             ch->mFileHdl = file_hdl;
             result = ch_id;
         } else
@@ -94,14 +92,26 @@ int mk_channel(const char* chName, enum ChannelType chType)
     return result;
 }
 
-int rm_channel(int chId)
+// non-negative - ok; negative - error
+int create_channel(const char* chName)
+{
+    return _open_channel(chName, 1);
+}
+
+// non-negative - ok; negative - error
+int connect_channel(const char* chName)
+{
+    return _open_channel(chName, 0);
+}
+
+int close_channel(int chId)
 {
     int result = 0;
     struct Channel *ch = NULL;
 
     ch = &g_channels[chId];
     close(ch->mFileHdl);
-    if (ch->mType == ctServer)
+    if (ch->mCreated)
         unlink(ch->mName);
     free(ch->mName);
     free(ch->mMsgBuff);

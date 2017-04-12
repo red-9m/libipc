@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "ipc.h"
+#include <ipc.h>
 #include <unistd.h>
 
 int main(int argc, char** argv)
@@ -12,7 +12,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    int ch = mk_channel("ex", ctClient);
+    int ch = connect_channel("ex");
     if (ch < 0)
     {
         printf("Error - could not connect to the channel `ex`\n");
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
             }
         }
         printf("Done[%d] times for client [%s]\n", i, argv[1]);
-        rm_channel(ch);
+        close_channel(ch);
     }
 
     return 0;
