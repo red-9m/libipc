@@ -3,6 +3,11 @@ Simple and productive IPC library written on pure C. Library is based on Unix na
 
 Communication is based on unidirectional channels. One side creates a channel and could receive messages from multiple clients through it. Other side connects to a channel and send messages.
 
+# Features
+* Fast!: 10K messages (~250K of data) written for 0.009s on i5-4250U CPU  
+* No overhead over Unix named pipes: mo memcpy() / strcpy() performed for your provided message buffer  
+* No messages are dropped: if you recive a good return from write_message() you guaranteed that consumer could receive it by read_message at any time
+
 # Configure:
 cmake .
 
@@ -21,6 +26,6 @@ make samples
 > ./sample-hello
 
 # Limitations
-Maximum number of channels - 64  
-Maximum messages in a channel - 64Kb (if you try to produce more messages, but 64k is not consumed, write_message() will return an error)  
-Multi-thread - create_channel(), connect_channel() and close_channel() must be protected by mutexes
+* Maximum number of channels - 64  
+* Maximum messages in a channel - 64Kb (if you try to produce more messages, but 64k is not consumed, write_message() will return an error)  
+* Multi-thread - create_channel(), connect_channel() and close_channel() must be protected by mutexes
