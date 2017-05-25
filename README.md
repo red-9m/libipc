@@ -6,7 +6,7 @@ Communication is based on unidirectional channels. One side creates a channel an
 # Features
 * Fast!: 10K messages (~250K of data) written for 0.009s on i5-4250U CPU  
 * No overhead over Unix named pipes: mo memcpy() / strcpy() performed for your provided message buffer  
-* No messages are dropped: if you recive a good return from write_message() you guaranteed that consumer could receive it by read_message at any time
+* No messages are dropped on overflow: if you receive a success from write_message() you guaranteed that consumer could receive the message by read_message() at any time
 
 # Configure:
 cmake .
