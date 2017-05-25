@@ -92,13 +92,11 @@ static int _open_channel(const char* chName, int chCreate)
     return result;
 }
 
-// non-negative - ok; negative - error
 int create_channel(const char* chName)
 {
     return _open_channel(chName, 1);
 }
 
-// non-negative - ok; negative - error
 int connect_channel(const char* chName)
 {
     return _open_channel(chName, 0);
@@ -106,17 +104,27 @@ int connect_channel(const char* chName)
 
 int close_channel(int chId)
 {
-    int result = 0;
-    struct Channel *ch = NULL;
+    int result = -1;
 
-    ch = &g_channels[chId];
-    close(ch->mFileHdl);
-    if (ch->mCreated)
-        unlink(ch->mName);
-    free(ch->mName);
-    free(ch->mMsgBuff);
-    ch->mMsgBuffPtr = NULL;
-    ch->mFileHdl = FREE_CHANNEL;
+    if (chId >= 0)
+    {
+        struct Channel *ch = NULL;
+
+        result = 0;
+        ch = &g_channels[chId];
+        if (ch->mFileHdl != FREE_CHANNEL)
+        {
+            close(ch->mFileHdl);
+            if (ch->mCreated)
+                unlink(ch->mName);
+            free(ch->mName);
+            free(ch->mMsgBuff);
+            ch->mFileHdl = FREE_CHANNEL;
+        }
+        ch->mName = NULL;
+        ch->mMsgBuff = NULL;
+        ch->mMsgBuffPtr = NULL;
+    }
 
     return result;
 }
@@ -124,17 +132,21 @@ int close_channel(int chId)
 const char* read_message(int chId)
 {
     const char *result = NULL;
-    struct Channel *ch = NULL;
 
-    ch = &g_channels[chId];
-
-    result = _message_from_buff(ch);
-    if (!result)
+    if (chId >= 0)
     {
-        ch->mMsgBuffSize = read(ch->mFileHdl, ch->mMsgBuff, MSG_BUFF_SIZE);
-        ch->mMsgBuffPtr = ch->mMsgBuff;
-        ch->mMsgBuff[ch->mMsgBuffSize] = '\0';
+        struct Channel *ch = NULL;
+
+        ch = &g_channels[chId];
+
         result = _message_from_buff(ch);
+        if (!result)
+        {
+            ch->mMsgBuffSize = read(ch->mFileHdl, ch->mMsgBuff, MSG_BUFF_SIZE);
+            ch->mMsgBuffPtr = ch->mMsgBuff;
+            ch->mMsgBuff[ch->mMsgBuffSize] = '\0';
+            result = _message_from_buff(ch);
+        }
     }
 
     return result;
@@ -142,11 +154,14 @@ const char* read_message(int chId)
 
 int write_message(int chId, const char* msgText)
 {
-    int written_bytes = 0;
-    struct Channel *ch = NULL;
+    int result = -1;
+    if (chId >= 0)
+    {
+        struct Channel *ch = NULL;
 
-    ch = &g_channels[chId];
-    written_bytes = write(ch->mFileHdl, msgText, strlen(msgText) + 1);
+        ch = &g_channels[chId];
+        result = write(ch->mFileHdl, msgText, strlen(msgText) + 1);
+    }
 
-    return written_bytes;
+    return result;
 }
