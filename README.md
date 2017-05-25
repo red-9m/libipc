@@ -21,6 +21,6 @@ make samples
 > ./sample-hello
 
 # Limitations
-Maximum number of channels - 64
-Maximum messages in a channel - 64Kb (if you try to produce more messages, but 64k is not consumed, write_message() will return an error)
+Maximum number of channels - 64  
+Maximum messages in a channel - 64Kb (if you try to produce more messages, but 64k is not consumed, write_message() will return an error)  
 Multi-thread - create_channel(), connect_channel() and close_channel() must be protected by mutexes
