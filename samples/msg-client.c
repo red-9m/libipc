@@ -12,7 +12,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    int ch = connect_channel("ex");
+    int ch = ipc_connect_channel("ex", tpMessage);
     if (ch < 0)
     {
         printf("Error - could not connect to the channel `ex`\n");
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
         {
             char buf[1024];
             sprintf(buf, "===client[%s]test[%d]===", argv[1], i);
-            written = write_message(ch, buf);
+            written = ipc_write_message(ch, buf);
             if ( written < 0)
             {
                 printf("Error - at iter[%d] written[%d]\n", i, written);
@@ -32,7 +32,7 @@ int main(int argc, char** argv)
             }
         }
         printf("Done[%d] times for client [%s]\n", i, argv[1]);
-        close_channel(ch);
+        ipc_close_channel(ch);
     }
 
     return 0;

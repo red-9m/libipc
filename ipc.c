@@ -3,7 +3,6 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
-//#include <stdio.h>
 
 #include "ipc.h"
 
@@ -13,12 +12,13 @@
 
 struct Channel
 {
-    char *mName;
-    int mCreated;
-    int mFileHdl;
-    char *mMsgBuff;
-    int mMsgBuffSize;
-    char *mMsgBuffPtr;
+    char* mName;
+    int   mCreated;
+    int   mFileHdl;
+    char* mMsgBuff;
+    int   mMsgBuffSize;
+    char* mMsgBuffPtr;
+    enum  ipc_type mType;
 };
 
 static struct Channel g_channels[MAX_CHANNELS];
@@ -29,7 +29,7 @@ static int _find_free_channel()
     int i;
     for (i = 0; i < MAX_CHANNELS; i++)
     {
-        if (g_channels[i].mFileHdl == FREE_CHANNEL)
+        if (g_channels[i].mType == FREE_CHANNEL)
         {
             result = i;
             break;
@@ -53,9 +53,9 @@ static const char *_message_from_buff(struct Channel *ch)
     return result;
 }
 
-static int _open_channel(const char* chName, int chCreate)
+static int _open_channel(const char* chName, enum ipc_type chType, int chCreate)
 {
-    int result = -1;
+    int result = IPC_NOFREE;
     int file_hdl = 0;
     struct Channel *ch = NULL;
     int ch_id;
@@ -79,47 +79,51 @@ static int _open_channel(const char* chName, int chCreate)
         {
             name_len = strlen(chName);
             ch->mName = malloc(name_len);
-            ch->mMsgBuff = malloc(MSG_BUFF_SIZE + 64);
+            if ((chType == tpMessage) && (chCreate == 1))
+                ch->mMsgBuff = malloc(MSG_BUFF_SIZE + 64);
+            else
+                ch->mMsgBuff = NULL;
             strncpy(ch->mName, chName, name_len);
             ch->mCreated = chCreate;
             ch->mFileHdl = file_hdl;
+            ch->mType = chType;
             result = ch_id;
         } else
         {
-            result = -2;
+            result = IPC_OPENERR;
         }
     }
     return result;
 }
 
-int create_channel(const char* chName)
+int ipc_create_channel(const char* chName, enum ipc_type chType)
 {
-    return _open_channel(chName, 1);
+    return _open_channel(chName, chType, 1);
 }
 
-int connect_channel(const char* chName)
+int ipc_connect_channel(const char* chName, enum ipc_type chType)
 {
-    return _open_channel(chName, 0);
+    return _open_channel(chName, chType, 0);
 }
 
-int close_channel(int chId)
+int ipc_close_channel(int chId)
 {
-    int result = -1;
+    int result = IPC_DSCERR;
 
     if (chId >= 0)
     {
-        struct Channel *ch = NULL;
-
         result = 0;
-        ch = &g_channels[chId];
-        if (ch->mFileHdl != FREE_CHANNEL)
+        struct Channel *ch = &g_channels[chId];
+
+        if (ch->mType != FREE_CHANNEL)
         {
             close(ch->mFileHdl);
             if (ch->mCreated)
                 unlink(ch->mName);
             free(ch->mName);
             free(ch->mMsgBuff);
-            ch->mFileHdl = FREE_CHANNEL;
+            ch->mFileHdl = 0;
+            ch->mType = FREE_CHANNEL;
         }
         ch->mName = NULL;
         ch->mMsgBuff = NULL;
@@ -129,38 +133,73 @@ int close_channel(int chId)
     return result;
 }
 
-const char* read_message(int chId)
+static int _write_object(int chId, const void* obj, int objSize, enum ipc_type sendType)
+{
+    int result = IPC_DSCERR;
+
+    if (chId >= 0)
+    {
+        struct Channel *ch = &g_channels[chId];
+        result = IPC_TYPEERR;
+        if (ch->mType == sendType)
+            result = write(ch->mFileHdl, obj, objSize);
+    }
+
+    return result;
+}
+
+int ipc_write_message(int chId, const char* msgText)
+{
+    return _write_object(chId, msgText, strlen(msgText) + 1, tpMessage);
+}
+
+int ipc_write_object(int chId, const void* obj, int objSize)
+{
+    return _write_object(chId, obj, objSize, tpObject);
+}
+
+const char* ipc_read_message(int chId)
 {
     const char *result = NULL;
 
     if (chId >= 0)
     {
-        struct Channel *ch = NULL;
+        struct Channel *ch = &g_channels[chId];
 
-        ch = &g_channels[chId];
-
-        result = _message_from_buff(ch);
-        if (!result)
+        if (ch->mType == tpMessage)
         {
-            ch->mMsgBuffSize = read(ch->mFileHdl, ch->mMsgBuff, MSG_BUFF_SIZE);
-            ch->mMsgBuffPtr = ch->mMsgBuff;
-            ch->mMsgBuff[ch->mMsgBuffSize] = '\0';
             result = _message_from_buff(ch);
+            if (!result)
+            {
+                ch->mMsgBuffSize = read(ch->mFileHdl, ch->mMsgBuff, MSG_BUFF_SIZE);
+                ch->mMsgBuffPtr = ch->mMsgBuff;
+                ch->mMsgBuff[ch->mMsgBuffSize] = '\0';
+                result = _message_from_buff(ch);
+            }
         }
     }
 
     return result;
 }
 
-int write_message(int chId, const char* msgText)
+int ipc_read_object(int chId, void* obj, int objSize)
 {
-    int result = -1;
+    int result = IPC_DSCERR;
+
     if (chId >= 0)
     {
-        struct Channel *ch = NULL;
+        struct Channel *ch = &g_channels[chId];
 
-        ch = &g_channels[chId];
-        result = write(ch->mFileHdl, msgText, strlen(msgText) + 1);
+        result = IPC_TYPEERR;
+        if (ch->mType == tpObject)
+        {
+            int read_bytes = read(ch->mFileHdl, obj, objSize);
+
+            if (objSize == read_bytes)
+                result = 0;
+            else
+                result = IPC_OBJERR;
+        }
     }
 
     return result;

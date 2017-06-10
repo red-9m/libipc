@@ -4,9 +4,9 @@ cmake_policy(SET CMP0065 NEW)
 set(CMAKE_BUILD_TYPE Release)
 
 file(GLOB sources ipc*.c ipc*.h)
-file(GLOB sample-server-src sample-server*.c sample-server*.h)
-file(GLOB sample-client-src sample-client*.c sample-client*.h)
-file(GLOB sample-hello-src sample-hello*.c sample-hello*.h)
+file(GLOB sample-server-src samples/msg-server.c)
+file(GLOB sample-client-src samples/msg-client.c)
+file(GLOB sample-hello-src samples/hello.c)
 
 add_library(ipc SHARED ${sources})
 add_library(ipc-static STATIC ${sources})
