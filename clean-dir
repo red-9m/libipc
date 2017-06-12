@@ -1,3 +1,5 @@
+#!/bin/bash
+
 make clean
 rm -rf ./CMakeFiles
 rm -rf ./CMakeCache.txt
