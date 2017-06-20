@@ -27,7 +27,7 @@ int main(int argc, char** argv)
             written = ipc_write_message(ch, buf);
             if ( written < 0)
             {
-                printf("Error - at iter[%d] written[%d]\n", i, written);
+                printf("Error in [%s] - at iter[%d] written[%d]\n", argv[1], i, written);
                 break;
             }
         }
