@@ -68,7 +68,7 @@ static int _open_channel(const char* chName, enum ipc_type chType, int chCreate)
 
         if (chCreate)
         {
-            mkfifo(chName, S_IRWXU);
+            mkfifo(chName, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
             file_hdl = open(chName, O_RDWR);
         } else
         {
