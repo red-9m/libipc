@@ -1,6 +1,10 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.2)
 project (ipc-project C)
+
+if(POLICY CMP0065)
 cmake_policy(SET CMP0065 NEW)
+endif()
+
 option(BUILD_SHARED_LIBS "Default build library as shared" ON)
 if (NOT CMAKE_BUILD_TYPE)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Set Release as default build type" FORCE)
