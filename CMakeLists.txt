@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.2)
-project (ipc-project C)
+project (libipc-project C)
 
 if(POLICY CMP0065)
 cmake_policy(SET CMP0065 NEW)
@@ -9,10 +9,12 @@ option(BUILD_SHARED_LIBS "Default build library as shared" ON)
 if (NOT CMAKE_BUILD_TYPE)
 set(CMAKE_BUILD_TYPE Release CACHE STRING "Set Release as default build type" FORCE)
 endif()
-message(STATUS "-------------------------------------------")
-message(STATUS "Build type   (CMAKE_BUILD_TYPE)  : " ${CMAKE_BUILD_TYPE})
-message(STATUS "Build shared (BUILD_SHARED_LIBS) : " ${BUILD_SHARED_LIBS})
-message(STATUS "-------------------------------------------")
+message(STATUS "--------------------------------------------------------------------------")
+message(STATUS "Project name (PROJECT_NAME)        : " ${PROJECT_NAME})
+message(STATUS "Project dir  (PROJECT_SOURCE_DIR)  : " ${PROJECT_SOURCE_DIR})
+message(STATUS "Build type   (CMAKE_BUILD_TYPE)    : " ${CMAKE_BUILD_TYPE})
+message(STATUS "Build shared (BUILD_SHARED_LIBS)   : " ${BUILD_SHARED_LIBS})
+message(STATUS "--------------------------------------------------------------------------")
 
 # Sources
 file(GLOB sources ipc*.c ipc*.h)
@@ -45,7 +47,7 @@ set_target_properties(sample-server PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED
 target_compile_options(sample-server PRIVATE ${_COMPILE_OPT})
 set_target_properties(sample-server PROPERTIES LINK_FLAGS ${_LINK_OPT})
 target_compile_definitions(sample-server PRIVATE ${_COMPILE_DEF})
-target_include_directories(sample-server BEFORE PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(sample-server BEFORE PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(sample-server ipc)
 
 # sample-client
@@ -53,7 +55,7 @@ set_target_properties(sample-client PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED
 target_compile_options(sample-client PRIVATE ${_COMPILE_OPT})
 set_target_properties(sample-client PROPERTIES LINK_FLAGS ${_LINK_OPT})
 target_compile_definitions(sample-client PRIVATE ${_COMPILE_DEF})
-target_include_directories(sample-client BEFORE PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(sample-client BEFORE PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(sample-client ipc)
 
 # sample-hello
@@ -61,5 +63,5 @@ set_target_properties(sample-hello PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED 
 target_compile_options(sample-hello PRIVATE ${_COMPILE_OPT})
 set_target_properties(sample-hello PROPERTIES LINK_FLAGS ${_LINK_OPT})
 target_compile_definitions(sample-hello PRIVATE ${_COMPILE_DEF})
-target_include_directories(sample-hello BEFORE PUBLIC ${CMAKE_SOURCE_DIR})
+target_include_directories(sample-hello BEFORE PUBLIC ${PROJECT_SOURCE_DIR})
 target_link_libraries(sample-hello ipc)
