@@ -1,4 +1,4 @@
-# libipc ver. 0.0.5
+# libipc ver. 0.0.6
 Simple lightweight and productive zero-copy IPC library. Written on pure C, based on Unix named pipes. Library is intended to exchange text messages and objects between processes.
 
 Communication is based on unidirectional channels. One side creates a channel and could receive messages from multiple clients through it. Other side connects to a channel and send messages. You also able to create object channel that allow you to send/receive structures and other objects. Structure no need serialization to be send.

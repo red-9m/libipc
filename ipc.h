@@ -13,15 +13,22 @@ enum ipc_type
     tpObject = 2
 };
 
+enum ipc_operation
+{
+    opBlock = 1,
+    opNonblock = 2
+};
+
 /** @brief Create new listening channel and open it for read
  *
  *  Only read is available for connected channel
  *
  *  @param chName Channel name
  *  @param chType Channel type (message or object)
+ *  @param chBlock Channel blocking mode for read/write operation (block or nonblock)
  *  @return non-negative - channel descriptor; negative - error
  */
-extern int ipc_create_channel(const char* chName, enum ipc_type chType);
+extern int ipc_create_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock);
 
 /** @brief Connects to existing channel
  *
@@ -30,9 +37,10 @@ extern int ipc_create_channel(const char* chName, enum ipc_type chType);
  *
  *  @param chName Channel name
  *  @param chType Channel type (must be same as passed to ipc_create_channel())
+ *  @param chBlock Channel blocking mode for read/write operation (block or nonblock)
  *  @return non-negative - channel descriptor; negative - error
  */
-extern int ipc_connect_channel(const char* chName, enum ipc_type chType);
+extern int ipc_connect_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock);
 
 /** @brief Close channel by descriptor
  *

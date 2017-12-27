@@ -53,26 +53,30 @@ static const char *_message_from_buff(struct Channel *ch)
     return result;
 }
 
-static int _open_channel(const char* chName, enum ipc_type chType, int chCreate)
+static int _open_channel(const char* chName, enum ipc_type chType, int chCreate, enum ipc_operation chBlock)
 {
     int result = IPC_NOFREE;
     int file_hdl = 0;
     struct Channel *ch = NULL;
     int ch_id;
     int name_len = 0;
+    int is_nonblock = 0;
 
     ch_id = _find_free_channel();
     if (ch_id >= 0)
     {
         ch = &g_channels[ch_id];
 
+        if (chBlock == opNonblock)
+            is_nonblock = O_NONBLOCK;
+
         if (chCreate)
         {
             mkfifo(chName, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-            file_hdl = open(chName, O_RDWR);
+            file_hdl = open(chName, O_RDWR | is_nonblock);
         } else
         {
-            file_hdl = open(chName, O_WRONLY | O_NONBLOCK);
+            file_hdl = open(chName, O_WRONLY | is_nonblock);
         }
 
         if (file_hdl > 0)
@@ -96,14 +100,14 @@ static int _open_channel(const char* chName, enum ipc_type chType, int chCreate)
     return result;
 }
 
-int ipc_create_channel(const char* chName, enum ipc_type chType)
+int ipc_create_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock)
 {
-    return _open_channel(chName, chType, 1);
+    return _open_channel(chName, chType, 1, chBlock);
 }
 
-int ipc_connect_channel(const char* chName, enum ipc_type chType)
+int ipc_connect_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock)
 {
-    return _open_channel(chName, chType, 0);
+    return _open_channel(chName, chType, 0, chBlock);
 }
 
 int ipc_close_channel(int chId)

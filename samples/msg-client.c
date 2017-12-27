@@ -12,7 +12,7 @@ int main(int argc, char** argv)
         return 1;
     }
 
-    int ch = ipc_connect_channel("ex", tpMessage);
+    int ch = ipc_connect_channel("ex", tpMessage, opNonblock);
     if (ch < 0)
     {
         printf("Error - could not connect to the channel `ex`\n");
