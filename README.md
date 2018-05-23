@@ -15,8 +15,11 @@ cmake .
 # Configure as static library:
 cmake . -DBUILD_SHARED_LIBS=OFF
 
-# Compile:
+# Compile library:
 cmake --build .
+
+# Compile library and samples:
+cmake --build . --target samples
 
 # Run client/server samples:
 > ./sample-server &  

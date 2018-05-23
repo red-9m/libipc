@@ -15,6 +15,7 @@ message(STATUS "Project name    (PROJECT_NAME)          : " ${PROJECT_NAME})
 message(STATUS "Project dir     (PROJECT_SOURCE_DIR)    : " ${PROJECT_SOURCE_DIR})
 message(STATUS "Build type      (CMAKE_BUILD_TYPE)      : " ${CMAKE_BUILD_TYPE})
 message(STATUS "Build shared    (BUILD_SHARED_LIBS)     : " ${BUILD_SHARED_LIBS})
+message(STATUS "Install prefix  (CMAKE_INSTALL_PREFIX)  : " ${CMAKE_INSTALL_PREFIX})
 message(STATUS "Install path    (IPC_INSTALL_PATH)      : " ${IPC_INSTALL_PATH})
 message(STATUS "--------------------------------------------------------------------------")
 
@@ -27,9 +28,9 @@ file(GLOB sample-hello-src samples/hello.c)
 # Targets
 add_library(ipc ${sources})
 add_custom_target(samples)
-add_executable(sample-server ${sample-server-src})
-add_executable(sample-client ${sample-client-src})
-add_executable(sample-hello ${sample-hello-src})
+add_executable(sample-server EXCLUDE_FROM_ALL ${sample-server-src})
+add_executable(sample-client EXCLUDE_FROM_ALL ${sample-client-src})
+add_executable(sample-hello EXCLUDE_FROM_ALL ${sample-hello-src})
 add_dependencies(samples sample-server sample-client sample-hello ipc)
 
 # Options
@@ -71,6 +72,4 @@ target_link_libraries(sample-hello ipc)
 # Install
 if (IPC_INSTALL_PATH)
     install(TARGETS ipc LIBRARY DESTINATION ${IPC_INSTALL_PATH})
-else()
-    install(TARGETS ipc LIBRARY DESTINATION ${PROJECT_SOURCE_DIR})
 endif()
