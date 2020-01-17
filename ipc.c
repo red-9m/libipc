@@ -3,11 +3,15 @@
 #include <sys/stat.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <errno.h>
 
 #include "ipc.h"
 
 #define MSG_BUFF_SIZE (64 * 1024)
 #define MAX_CHANNELS 64
+#define MAX_LISTENERS 1
 #define FREE_CHANNEL 0
 
 struct Channel
@@ -15,10 +19,13 @@ struct Channel
     char* mName;
     int   mCreated;
     int   mFileHdl;
+    int   mListener;
     char* mMsgBuff;
     int   mMsgBuffSize;
     char* mMsgBuffPtr;
     enum  ipc_type mType;
+    enum  ipc_transport mTransport;
+    enum  ipc_operation mBlock;
 };
 
 static struct Channel g_channels[MAX_CHANNELS];
@@ -35,6 +42,7 @@ static int _find_free_channel()
             break;
         }
     }
+
     return result;
 }
 
@@ -53,12 +61,101 @@ static const char *_message_from_buff(struct Channel *ch)
     return result;
 }
 
-static int _open_channel(const char* chName, enum ipc_type chType, int chCreate, enum ipc_operation chBlock)
+static void _sock_set_block_mode(int fd, enum ipc_operation chBlock)
 {
-    int result = IPC_NOFREE;
-    int file_hdl = 0;
+    int flags = fcntl(fd, F_GETFL, 0);
+    flags = (chBlock == opBlock) ? (flags & ~O_NONBLOCK) : (flags | O_NONBLOCK);
+    fcntl(fd, F_SETFL, flags);
+}
+
+static int _read_transport(struct Channel *ch, void *buffer, size_t size)
+{
+    int result = IPC_SOCKERR;
+
+    if ((ch->mTransport == trSock) && (ch->mFileHdl == -1))
+    {
+        ch->mFileHdl = accept(ch->mListener, NULL, NULL);
+        _sock_set_block_mode(ch->mFileHdl, ch->mBlock);
+    }
+
+    if (ch->mFileHdl != -1)
+    {
+        result = read(ch->mFileHdl, buffer, size);
+
+        if (result == 0)
+        {
+            result = IPC_SOCKERR;
+            close(ch->mFileHdl);
+            ch->mFileHdl = -1;
+        } else if (result == -1)
+            result = -errno;
+    }
+
+    return result;
+}
+
+static int _open_channel_sock(const char* chName, enum ipc_type chType, int chCreate, enum ipc_operation chBlock)
+{
+    int ch_id, fd, name_len;
+    struct sockaddr_un addr;
     struct Channel *ch = NULL;
+    int result = IPC_NOFREE;
+
+    ch_id = _find_free_channel();
+    if (ch_id >= 0)
+    {
+        ch = &g_channels[ch_id];
+        fd = socket(PF_LOCAL, SOCK_STREAM, 0);
+
+        if (fd != -1)
+        {
+            name_len = strlen(chName);
+            memset(&addr, 0, sizeof(addr));
+            addr.sun_family = AF_LOCAL;
+            strncpy(addr.sun_path, chName, 107);
+
+            if (chCreate)
+            {
+                unlink(chName);
+                result = bind(fd, (struct sockaddr*)&addr, sizeof(addr));
+                if (result == 0)
+                    result = listen(fd, MAX_LISTENERS);
+            }
+            else
+                result = connect(fd, (struct sockaddr*)&addr, sizeof(addr));
+
+            if (result == 0)
+            {
+                _sock_set_block_mode(fd, chBlock);
+
+                ch->mName = malloc(name_len);
+                strncpy(ch->mName, chName, name_len);
+                ch->mMsgBuff = malloc(MSG_BUFF_SIZE + 64);
+                ch->mCreated = chCreate;
+                if (chCreate)
+                    ch->mFileHdl = -1;
+                else
+                    ch->mFileHdl = fd;
+                ch->mListener = fd;
+                ch->mType = chType;
+                ch->mTransport = trSock;
+                ch->mBlock = chBlock;
+                result = ch_id;
+            } else
+                result = -errno;
+        } else
+            result = -errno;
+    }
+
+    return result;
+}
+
+static int _open_channel_fifo(const char* chName, enum ipc_type chType, int chCreate, enum ipc_operation chBlock)
+{
     int ch_id;
+    int flags = 0;
+    int result = IPC_NOFREE;
+    struct Channel *ch = NULL;
     int name_len = 0;
     int is_nonblock = 0;
 
@@ -72,14 +169,15 @@ static int _open_channel(const char* chName, enum ipc_type chType, int chCreate,
 
         if (chCreate)
         {
+            unlink(chName);
             mkfifo(chName, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
-            file_hdl = open(chName, O_RDWR | is_nonblock);
+            flags = O_RDWR;
         } else
-        {
-            file_hdl = open(chName, O_WRONLY | is_nonblock);
-        }
+            flags = O_WRONLY;
 
-        if (file_hdl > 0)
+        result = open(chName, flags | is_nonblock);
+
+        if (result != -1)
         {
             name_len = strlen(chName);
             ch->mName = malloc(name_len);
@@ -89,25 +187,33 @@ static int _open_channel(const char* chName, enum ipc_type chType, int chCreate,
                 ch->mMsgBuff = NULL;
             strncpy(ch->mName, chName, name_len);
             ch->mCreated = chCreate;
-            ch->mFileHdl = file_hdl;
+            ch->mFileHdl = result;
+            ch->mListener = -1;
             ch->mType = chType;
+            ch->mTransport = trFifo;
+            ch->mBlock = chBlock;
             result = ch_id;
         } else
-        {
-            result = IPC_OPENERR;
-        }
+            result = -errno;
     }
+
     return result;
 }
 
-int ipc_create_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock)
+int ipc_create_channel(const char* chName, enum ipc_transport chTransport, enum ipc_type chType, enum ipc_operation chBlock)
 {
-    return _open_channel(chName, chType, 1, chBlock);
+    if (chTransport == trFifo)
+        return _open_channel_fifo(chName, chType, 1, chBlock);
+    else
+        return _open_channel_sock(chName, chType, 1, chBlock);
 }
 
-int ipc_connect_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock)
+int ipc_connect_channel(const char* chName, enum ipc_transport chTransport, enum ipc_type chType, enum ipc_operation chBlock)
 {
-    return _open_channel(chName, chType, 0, chBlock);
+    if (chTransport == trFifo)
+        return _open_channel_fifo(chName, chType, 0, chBlock);
+    else
+        return _open_channel_sock(chName, chType, 0, chBlock);
 }
 
 int ipc_close_channel(int chId)
@@ -121,12 +227,16 @@ int ipc_close_channel(int chId)
 
         if (ch->mType != FREE_CHANNEL)
         {
-            close(ch->mFileHdl);
+            if (ch->mFileHdl != -1)
+                close(ch->mFileHdl);
             if (ch->mCreated)
                 unlink(ch->mName);
+            if (ch->mListener != -1)
+                close(ch->mListener);
             free(ch->mName);
             free(ch->mMsgBuff);
-            ch->mFileHdl = 0;
+            ch->mFileHdl = -1;
+            ch->mListener = -1;
             ch->mType = FREE_CHANNEL;
         }
         ch->mName = NULL;
@@ -145,8 +255,29 @@ static int _write_object(int chId, const void* obj, int objSize, enum ipc_type s
     {
         struct Channel *ch = &g_channels[chId];
         result = IPC_TYPEERR;
+
         if (ch->mType == sendType)
-            result = write(ch->mFileHdl, obj, objSize);
+        {
+            result = IPC_SOCKERR;
+            if (ch->mFileHdl != -1)
+            {
+                if (ch->mTransport == trSock)
+                    result = send(ch->mFileHdl, obj, objSize, MSG_NOSIGNAL);
+                else
+                    result = write(ch->mFileHdl, obj, objSize);
+
+                if (result == -1)
+                {
+                    result = -errno;
+                    if (result == -EPIPE)
+                    {
+                        result = IPC_SOCKERR;
+                        close(ch->mFileHdl);
+                        ch->mFileHdl = -1;
+                    }
+                }
+            }
+        }
     }
 
     return result;
@@ -175,10 +306,14 @@ const char* ipc_read_message(int chId)
             result = _message_from_buff(ch);
             if (!result)
             {
-                ch->mMsgBuffSize = read(ch->mFileHdl, ch->mMsgBuff, MSG_BUFF_SIZE);
-                ch->mMsgBuffPtr = ch->mMsgBuff;
-                ch->mMsgBuff[ch->mMsgBuffSize] = '\0';
-                result = _message_from_buff(ch);
+                ch->mMsgBuffSize = _read_transport(ch, ch->mMsgBuff, MSG_BUFF_SIZE);
+
+                if (ch->mMsgBuffSize > 0)
+                {
+                    ch->mMsgBuffPtr = ch->mMsgBuff;
+                    ch->mMsgBuff[ch->mMsgBuffSize] = '\0';
+                    result = _message_from_buff(ch);
+                }
             }
         }
     }
@@ -197,11 +332,9 @@ int ipc_read_object(int chId, void* obj, int objSize)
         result = IPC_TYPEERR;
         if (ch->mType == tpObject)
         {
-            int read_bytes = read(ch->mFileHdl, obj, objSize);
+            result = _read_transport(ch, obj, objSize);
 
-            if (objSize == read_bytes)
-                result = 0;
-            else
+            if ((result > 0) && (objSize != result))
                 result = IPC_OBJERR;
         }
     }

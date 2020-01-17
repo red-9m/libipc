@@ -1,11 +1,18 @@
 #ifndef _LIB_IPC_H_
 #define _LIB_IPC_H_
 
-#define IPC_NOFREE  -1 // No free channels available
-#define IPC_OPENERR -2 // Error open channel
-#define IPC_DSCERR  -3 // Not valid descriptor
-#define IPC_OBJERR  -4 // Incorrect object size
-#define IPC_TYPEERR -5 // Incorrect channel type
+// IPC error codes
+#define IPC_NOFREE  -101 // No free channels available
+#define IPC_DSCERR  -102 // Not valid descriptor
+#define IPC_OBJERR  -103 // Incorrect object size
+#define IPC_TYPEERR -104 // Incorrect channel type
+#define IPC_SOCKERR -105 // Incorrect or closed socket
+
+enum ipc_transport
+{
+    trFifo = 1, // Unix Named Pipes: Unidirectional transport, many client could send to one server
+    trSock = 2  // Unix Domain Sockets: Bidirectional transport, one client to one server
+};
 
 enum ipc_type
 {
@@ -24,11 +31,12 @@ enum ipc_operation
  *  Only read is available for connected channel
  *
  *  @param chName Channel name
+ *  @param chTransport Channel transport
  *  @param chType Channel type (message or object)
  *  @param chBlock Channel blocking mode for read/write operation (block or nonblock)
- *  @return non-negative - channel descriptor; negative - error
+ *  @return non-negative - channel descriptor; negative - error or negative errno
  */
-extern int ipc_create_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock);
+extern int ipc_create_channel(const char* chName, enum ipc_transport chTransport, enum ipc_type chType, enum ipc_operation chBlock);
 
 /** @brief Connects to existing channel
  *
@@ -36,11 +44,12 @@ extern int ipc_create_channel(const char* chName, enum ipc_type chType, enum ipc
  *  Only write is available for connected channel
  *
  *  @param chName Channel name
+ *  @param chTransport Channel transport
  *  @param chType Channel type (must be same as passed to ipc_create_channel())
  *  @param chBlock Channel blocking mode for read/write operation (block or nonblock)
- *  @return non-negative - channel descriptor; negative - error
+ *  @return non-negative - channel descriptor; negative - error or negative errno
  */
-extern int ipc_connect_channel(const char* chName, enum ipc_type chType, enum ipc_operation chBlock);
+extern int ipc_connect_channel(const char* chName, enum ipc_transport chTransport, enum ipc_type chType, enum ipc_operation chBlock);
 
 /** @brief Close channel by descriptor
  *
@@ -53,14 +62,14 @@ extern int ipc_close_channel(int chId);
  *
  *  @param chId Channel descriptor
  *  @param msgText Text message
- *  @return non-negative - number of bytes written; negative - error
+ *  @return non-negative - number of bytes written; negative - ipc error or negative errno
  */
 extern int ipc_write_message(int chId, const char* msgText);
 
 /** @brief Read message from the channel. Returns only when got a message
  *
  *  @param chId Channel descriptor
- *  @return non-negative - non-null - message; null - error
+ *  @return non-null - message; null - no message for non block operation or error
  */
 extern const char* ipc_read_message(int chId);
 
@@ -69,7 +78,7 @@ extern const char* ipc_read_message(int chId);
  *  @param chId Channel descriptor
  *  @param obj Object to be written
  *  @param objSize Size of object
- *  @return non-negative - number of bytes written; negative - error
+ *  @return non-negative - number of bytes written; negative - error or negative errno
  */
 extern int ipc_write_object(int chId, const void* obj, int objSize);
 
@@ -78,7 +87,7 @@ extern int ipc_write_object(int chId, const void* obj, int objSize);
  *  @param chId Channel descriptor
  *  @param obj Object to read to
  *  @param objSize Size of object
- *  @return non-negative - ok; negative - error
+ *  @return positive - ok; negative - ipc error or negative errno
  */
 extern int ipc_read_object(int chId, void* obj, int objSize);
 
