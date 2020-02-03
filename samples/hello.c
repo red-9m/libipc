@@ -17,8 +17,8 @@ int main()
 
     printf("IPC Hello World\n");
 
-    int ch_consumer = ipc_create_channel(CH_NAME, trFifo, tpObject, opBlock);
-    int ch_producer = ipc_connect_channel(CH_NAME, trFifo, tpObject, opNonblock);
+    int ch_consumer = ipc_create_channel(CH_NAME, ipcFifo, ipcObject, ipcBlock);
+    int ch_producer = ipc_connect_channel(CH_NAME, ipcFifo, ipcObject, ipcNonblock);
 
     ipc_write_object(ch_producer, &adam, sizeof(struct person));
 

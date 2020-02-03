@@ -4,12 +4,12 @@
 
 int main()
 {
-    printf("IPC client sample\n");
+    printf("\n[Client] - Started\n");
 
-    int ch = ipc_connect_channel("./ex", trSock, tpMessage, opBlock);
+    int ch = ipc_connect_channel("./ex", ipcSock, ipcMessage, ipcBlock);
     if (ch < 0)
     {
-        printf("Error - could not connect to the channel `ex` [%d]\n", ch);
+        printf("[Client] - Error, could not connect to the channel `ex` [%d]\n", ch);
     } else
     {
         int i = 0;
@@ -21,15 +21,15 @@ int main()
             written = ipc_write_message(ch, buf);
             if ( written < 0)
             {
-                printf("Error - at iter[%d] written[%d]\n", i, written);
+                printf("[Client] - Error at iter[%d] written[%d]\n", i, written);
                 break;
             } else
-                printf("Msg send[%d]\n", i);
+                printf("[Client] - Msg send[%d]\n", i);
             sleep(1);
-            printf("Got back [%s]\n", ipc_read_message(ch));
+            printf("[Client] - Got back [%s]\n", ipc_read_message(ch));
             sleep(1);
         }
-        printf("Done[%d] times for client\n", i);
+        printf("[Client] - Done[%d] times for client\n", i);
         ipc_close_channel(ch);
     }
 

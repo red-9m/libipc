@@ -41,6 +41,11 @@ set(_COMPILE_OPT -pipe -ftree-vectorize -ffast-math -flto -Wall -Wextra -Wpedant
 set(_LINK_OPT "-flto -fuse-ld=gold")
 set(_COMPILE_DEF -D_POSIX_C_SOURCE=199309L)
 
+if (CMAKE_BUILD_TYPE EQUAL "Debug")
+    set(_COMPILE_OPT ${_COMPILE_OPT} -g)
+    set(_LINK_OPT "${_LINK_OPT} -g")
+endif()
+
 # ipc
 set_target_properties(ipc PROPERTIES C_STANDARD 11 C_STANDARD_REQUIRED ON C_EXTENSIONS OFF)
 target_compile_options(ipc PRIVATE ${_COMPILE_OPT})
